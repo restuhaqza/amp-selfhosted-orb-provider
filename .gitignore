@@ -1,0 +1,6 @@
+# Provider tokens
+*.env
+!*.env.example
+
+# Local build artefacts
+*.log

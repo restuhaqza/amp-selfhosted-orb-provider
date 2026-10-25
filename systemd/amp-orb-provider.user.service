@@ -1,0 +1,16 @@
+[Unit]
+Description=Amp self-hosted orb provider (Docker dispatch)
+Documentation=https://ampcode.com/docs/orbs/self-hosted
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Holds AMP_ORB_PROVIDER_TOKEN (aop_live_…). The leading "-" keeps the unit
+# loadable before the token is written.
+EnvironmentFile=-%h/.config/amp/orb-provider.env
+ExecStart=%h/.local/bin/amp orb provider %h/.amp/orbs/dispatch.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

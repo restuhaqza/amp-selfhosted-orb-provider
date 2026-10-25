@@ -1,0 +1,32 @@
+# System-level variant, for hosts where `systemctl --user` cannot reach a bus
+# (no logind session, e.g. access over a channel that skips PAM).
+#
+# Install, replacing CHANGE_ME with your user:
+#   sudo sed "s/CHANGE_ME/$USER/g" systemd/amp-orb-provider.system.service \
+#     | sudo tee /etc/systemd/system/amp-orb-provider.service >/dev/null
+#   sudo systemctl daemon-reload && sudo systemctl enable --now amp-orb-provider
+#
+# Stop and disable the user unit first: one provider per token.
+
+[Unit]
+Description=Amp self-hosted orb provider (Docker dispatch)
+Documentation=https://ampcode.com/docs/orbs/self-hosted
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+User=CHANGE_ME
+Group=CHANGE_ME
+Environment=HOME=/home/CHANGE_ME
+Environment=PATH=/home/CHANGE_ME/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Holds AMP_ORB_PROVIDER_TOKEN (aop_live_...). systemd reads it as root, so the
+# file stays private to its owner.
+EnvironmentFile=/home/CHANGE_ME/.config/amp/orb-provider.env
+ExecStart=/home/CHANGE_ME/.local/bin/amp orb provider /home/CHANGE_ME/.amp/orbs/dispatch.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
