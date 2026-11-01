@@ -17,6 +17,16 @@ FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 ENV container=docker
 
+# `USER` and `LOGNAME` must be declared: Docker sets the uid for
+# `docker exec --user user` but never the environment, so without these every
+# process in the orb (bootstrap, tool shells, the Amp CLI) sees `USER` empty.
+# The CLI takes the `User=` of the transient units behind `amp orb service
+# start` from `$USER`; empty becomes `User=unknown`, systemd refuses to start
+# the unit (217/USER), and whatever that unit served — including an orb portal
+# — stops answering.
+ENV USER=user
+ENV LOGNAME=user
+
 # systemd (PID 1) plus everything the dispatch contract requires: bash,
 # coreutils, util-linux, CA certificates, git >= 2.34, sudo, node >= 18,
 # tmux >= 2.9, curl, and the recommended ripgrep, gh and openssh-client.

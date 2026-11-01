@@ -107,6 +107,24 @@ Two details that matter:
 - `STOPSIGNAL SIGRTMIN+3` lets `docker stop` hand systemd a clean power-off
   (~1s, exit code 0) instead of killing it after the timeout.
 
+### `USER` and `LOGNAME` are set on purpose
+
+`docker exec --user user` selects the uid; it does not touch the environment, so
+without `ENV USER=user` (and `LOGNAME`) in the image — or `--env USER=user` on
+the bootstrap exec — every process in the orb sees `USER` empty.
+
+That breaks more than shell prompts. Amp's CLI reads `$USER` when it fills the
+`User=` field of the transient systemd units behind `amp orb service start`, so
+an empty value is written as `User=unknown`; systemd then refuses the unit with
+`217/USER` (`Failed to determine user credentials`), it crash-loops until
+`Start request repeated too quickly`, and anything that unit served — a preview
+server behind an orb portal, for example — stops answering while the portal URL
+still redirects normally. Starting the same service by hand with
+`USER=user amp orb service start …` works, which is the tell.
+
+The image sets the variables for new orbs; the bootstrap `--env` flags repair
+orbs built from an older image on their next spawn or resume.
+
 Units that need host kernel access (`sys-kernel-config.mount`,
 `sys-kernel-debug.mount`, `sys-kernel-tracing.mount`, `kmod-static-nodes.service`)
 are masked by symlinking to `/dev/null`. `systemctl mask` cannot be used during a
@@ -132,6 +150,8 @@ Measured on the orb container: `privileged=false`, `capadd=[]`, `devices=[]`,
 PID 1                 root systemd
 systemctl is-system-running   running        (0 failed units)
 docker exec --user user id    uid=1000(user)
+docker exec --user user env   USER=user LOGNAME=user
+amp orb service start probe   systemctl cat amp-svc-probe | grep User=  →  User=user
 pause                 exit code 0, snapshot committed
 resume                systemd boots again
 delete                container removed

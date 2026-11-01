@@ -59,7 +59,15 @@ spawn)
 
 	# A bare --env NAME copies the value from this provider's environment.
 	# `amp orb bootstrap` must run detached, as the image's default user.
-	docker exec -d --user user --env ORB_TOKEN ${AMP_URL:+--env AMP_URL} "$ORB_ID" amp orb bootstrap
+	# `--user` selects the uid but not the environment, so pass USER and
+	# LOGNAME explicitly: the CLI reads $USER to fill the `User=` of the units
+	# it creates for `amp orb service start`, and an empty value becomes
+	# `User=unknown`, which systemd rejects with 217/USER. Images built before
+	# the ENV lines in image/Dockerfile are repaired by this line alone.
+	docker exec -d --user user \
+		--env USER=user --env LOGNAME=user \
+		--env ORB_TOKEN ${AMP_URL:+--env AMP_URL} \
+		"$ORB_ID" amp orb bootstrap
 	;;
 
 pause)
